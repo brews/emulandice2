@@ -6,6 +6,8 @@ import enum
 import logging
 
 import click
+from pathlib import Path
+import tempfile
 
 from emulandice2.emulandice_project import emulandice_project
 
@@ -14,13 +16,13 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
-class IceSource(enum.Enum):
+class IceSource(enum.StrEnum):
     GIS = enum.auto()
     AIS = enum.auto()
     GLA = enum.auto()
 
 
-class Region(enum.Enum):
+class Region(enum.StrEnum):
     ALL = enum.auto()
     RGI01 = enum.auto()
     RGI02 = enum.auto()
@@ -62,7 +64,7 @@ class Region(enum.Enum):
     help="Ice source region: ALL for GIS/AIS and RGI01-RGI19 for GLA",
     envvar="EMULANDICE2_REGIONS",
     multiple=True,
-    default=Region.ALL,
+    default=[Region.ALL],
     type=click.Choice(Region, case_sensitive=False),
 )
 @click.option(
@@ -83,6 +85,13 @@ class Region(enum.Enum):
     help="NetCDF4 file containing surface temperature data",
     envvar="EMULANDICE2_CLIMATE_DATA_FILE",
     required=True,
+)
+@click.option(
+    "--output-gslr-file",
+    envvar="EMULANDICE2_OUTPUT_GSLR_FILE",
+    help="Path to write output global SLR file.",
+    required=True,
+    type=str,
 )
 @click.option(
     "--seed",
@@ -138,6 +147,13 @@ class Region(enum.Enum):
     default=False,
     type=bool,
 )
+@click.option(
+    "--r-script-path",
+    help="Path to R script to launch emulandice2",
+    type=str,
+    required=True,
+    envvar="EMULANDICE2_R_SCRIPT_PATH",
+)
 @click.option("--debug/--no-debug", default=False, envvar="EMULANDICE2_DEBUG")
 def main(
     pipeline_id,
@@ -145,6 +161,7 @@ def main(
     region,
     emu_file,
     climate_data_file,
+    output_gslr_file,
     scenario,
     baseyear,
     seed,
@@ -154,6 +171,7 @@ def main(
     cyear_start,
     cyear_end,
     no_rebase,
+    r_script_path,
     debug,
 ) -> None:
     """
@@ -168,21 +186,29 @@ def main(
 
     do_rebase = not no_rebase
 
-    emulandice_project(
-        pipeline_id,
-        ice_source,
-        region,
-        emu_file,
-        climate_data_file,
-        scenario,
-        baseyear,
-        seed,
-        pyear_start,
-        pyear_end,
-        pyear_step,
-        cyear_start,
-        cyear_end,
-        doRebaseSamples=do_rebase,
-    )
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir = Path(tmpdir)
+        emulandice2_r_output_dir = tmpdir / "results"
+        emulandice2_r_output_dir.mkdir(parents=True, exist_ok=True)
+
+        _ = emulandice_project(
+            pipeline_id,
+            ice_source,
+            region,
+            emu_file,
+            climate_data_file,
+            output_gslr_file,
+            emulandice2_r_output_dir,
+            scenario,
+            baseyear,
+            seed,
+            pyear_start,
+            pyear_end,
+            pyear_step,
+            cyear_start,
+            cyear_end,
+            doRebaseSamples=do_rebase,
+            r_script_path=r_script_path,
+        )
 
     logger.info("emulandice2 complete")

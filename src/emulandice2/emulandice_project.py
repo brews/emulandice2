@@ -1,6 +1,8 @@
+from pathlib import Path
 import sys
 import argparse
 import subprocess
+import shutil
 import os
 import time
 import xarray as xr
@@ -17,6 +19,8 @@ def emulandice_project(
     regions,
     emu_file,
     climate_data_file,
+    output_gslr_file,
+    output_dir,
     scenario,
     baseyear,
     seed,
@@ -25,6 +29,7 @@ def emulandice_project(
     pyear_step,
     cyear_start,
     cyear_end,
+    r_script_path,
     doRebaseSamples=True,
 ):
     # Run the module using the FACTS forcing data
@@ -42,9 +47,10 @@ def emulandice_project(
                         emu_file[ii],
                         climate_data_file,
                         scenario,
-                        "./",
+                        output_dir,
                         seed,
                         pipeline_id,
+                        r_script_path,
                     ),
                     targyears,
                     baseyear,
@@ -63,9 +69,10 @@ def emulandice_project(
                     emu_file[ii],
                     climate_data_file,
                     scenario,
-                    "./",
+                    output_dir,
                     seed,
                     pipeline_id,
+                    r_script_path,
                 )
             )
             for ii in np.arange(len(regions))
@@ -73,11 +80,17 @@ def emulandice_project(
 
     run_regions = dask.compute(*lazy_regions)
 
+    logger.debug(f"R-output files are {run_regions}")
+    outfile = Path(run_regions[0])
     if len(regions) > 1:
-        outfile = pipeline_id + "_ALL_globalsl.nc"
+        outfile = Path(output_dir) / pipeline_id + "_ALL_globalsl.nc"
         # does all-region outfile already exist? if not, produce it
         if not os.path.exists(outfile):
             TotalSamples(run_regions, outfile, 50, ice_source)
+
+    # Copy the global sea-level file from tmp to where the user requested output be.
+    shutil.copy(outfile, output_gslr_file)
+    logger.info(f"Output GSL file copied to {output_gslr_file}")
 
     return run_regions
 
@@ -113,6 +126,7 @@ def ExtrapolateRate(sample, targyears, cyear_start, cyear_end):
 
 
 def RebaseSamples(ncfile, targyears, baseyear, cyear_start, cyear_end):
+    ncfile = str(ncfile)
     print("Rebasing " + ncfile + "...")
     print(f"NC FILE TO BE REBASED AND EXTRAPOLATED: {ncfile}")
     ds = xr.open_dataset(ncfile)
@@ -158,10 +172,19 @@ def RebaseSamples(ncfile, targyears, baseyear, cyear_start, cyear_end):
 
 
 def emulandice_steer(
-    ice_source, region, emu_file, climate_data_file, scenario, outdir, seed, pipeline_id
+    ice_source,
+    region,
+    emu_file,
+    climate_data_file,
+    scenario,
+    outdir,
+    seed,
+    pipeline_id,
+    r_script_path,
 ):
-    logger.debug("Launching R emulandice2 subprocess")
-
+    outdir = str(outdir) + "/"  # R emulandice2 needs this to end with '/'
+    ice_source = str(ice_source.upper())
+    region = str(region.upper())
     arguments = [
         ice_source,
         region,
@@ -172,11 +195,15 @@ def emulandice_steer(
         str(seed),
         pipeline_id,
     ]
-    subprocess.run(["bash", "emulandice_steer.sh", *arguments])
-    outfile = pipeline_id + "_" + region + "_globalsl.nc"
+    rscript_cmd = ["Rscript", r_script_path, *arguments]
 
-    logger.debug("R emulandice2 subprocess complete")
-    return outfile
+    logger.debug(f"Launching R emulandice2 subprocess {rscript_cmd=}")
+    subprocess.run(rscript_cmd, shell=False, check=True)
+    logger.info("R emulandice2 subprocess complete")
+
+    outfile = pipeline_id + "_" + region + "_globalsl.nc"
+    outpath = Path(outdir) / outfile
+    return outpath
 
 
 def TotalSamples(infiles, outfile, chunksize, ice_source):

@@ -1,6 +1,6 @@
 FROM rocker/tidyverse:4.5.1
 
-RUN apt update && apt install -y cmake libnetcdf-dev
+RUN apt update && apt install -y cmake libnetcdf-dev && apt clean
 
 # RUN R -e "install.packages('renv', version='1.1.5')"
 # RUN R -e "renv::init(bare=TRUE)"
@@ -31,5 +31,8 @@ RUN uv sync --frozen --no-cache --no-dev --compile-bytecode
 
 # Easily run commands from the environment just created.
 ENV PATH="${APP_HOME}/.venv/bin:$PATH"
+
+# So CLI app knows where to find the magic R script to run emulandice2
+ENV EMULANDICE2_R_SCRIPT_PATH="${APP_HOME}/scripts/main.R"
 
 ENTRYPOINT ["emulandice2"]
