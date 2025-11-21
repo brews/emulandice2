@@ -22,6 +22,8 @@
 #' # Get FACTS args
 # Get FACTS args ------------------------------------------------------------
 
+library("emulandice2")
+
 cat("_______________________________________\n")
 cat("Hello! Welcome to emulandice2: predict\n")
 cat("_______________________________________\n")
