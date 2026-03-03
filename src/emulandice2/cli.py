@@ -138,7 +138,7 @@ class Region(enum.StrEnum):
 @click.option(
     "--cyear-end",
     help="Constant rate calculation for projections ends at this year",
-    envvar="EMULANDICE2_CYEAR_YEAR",
+    envvar="EMULANDICE2_CYEAR_END",
 )
 @click.option(
     "--no-rebase",
