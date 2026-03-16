@@ -1,9 +1,9 @@
 # emulandice2
 
-Application projecting sea-level change from muli-model land-ice Gaussian emulation using Tamsin Edward's [emulandice2](https://github.com/tamsinedwards/emulandice2).
+Application projecting sea-level change from muli-model land-ice Gaussian process emulation using Tamsin Edward's [emulandice2](https://github.com/tamsinedwards/emulandice2).
 
 > [!WARNING]
-> At the time of writing, this application, and Edward's upstream `emulandice2` R library, are in active development. Expect bugs and breaking changes.
+> At the time of writing, this application and Edward's upstream `emulandice2` R library are in early development. Expect bugs and breaking changes.
 
 ## Example
 
@@ -32,7 +32,7 @@ docker run --rm \
   --debug --output-gslr-file="/data/output/gslr.nc"
 ```
 
-If the run is successful, the output projection will appear in ./data/output.
+If the run is successful, the output projection will appear in `./data/output`.
 
 > [!TIP]
 > For this example we use `ghcr.io/fact-sealevel/emulandice2:latest`. We do not recommend using `latest` for production runs because it is not reproducible. Instead, use a tag for a specific version of the image or an image's digest hash. You can find tagged image versions and digests [here](https://github.com/fact-sealevel/emulandice2/pkgs/container/emulandice2).
