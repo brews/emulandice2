@@ -11,6 +11,9 @@ First let's create directories for input and output data.
 
 ```shell
 mkdir -p ./data/input
+
+echo "New_York	12	40.70	-74.01" > ./data/input/location.lst
+
 mkdir -p ./data/output
 ```
 
@@ -29,7 +32,11 @@ docker run --rm \
   --climate-data-file="/data/input/emulandice2.ssp585.GrIS2300.temperature.fair.temperature_climate.nc" \
   --pyear-start=2020 \
   --pyear-end=2300 \
-  --output-gslr-file="/data/output/gslr.nc"
+  --location-file="/data/input/location.lst" \
+  --grdfingerprintfile="/data/input/grd_fingerprintmap.yml" \
+  --fingerprint-dir="/data/input/FPRINT" \
+  --output-gslr-file="/data/output/gslr.nc" \
+  --output-lslr-file="/data/output/lslr.nc"
 ```
 
 If the run is successful, the output projection will appear in `./data/output`.
@@ -61,6 +68,8 @@ Options:
                                   data  [required]
   --output-gslr-file TEXT         Path to write output global SLR file.
                                   [required]
+  --output-lslr-file TEXT         Path to write output local SLR file.
+                                  [required]
   --seed INTEGER                  Seed for random number generator  [default:
                                   1234]
   --pyear-start INTEGER           Year for which projections start  [default:
@@ -72,6 +81,14 @@ Options:
                                   [default: 10]
   --baseyear INTEGER              Base year to which slr projections are
                                   centered  [default: 2005]
+  --chunksize INTEGER             Number of locations to process at a time
+                                  [default=50].  [default: 50]
+  --location-file TEXT            File containing name, id, lat, and lon of
+                                  points for localization.  [required]
+  --grdfingerprintfile TEXT       YAML file that contains the fingerprints for
+                                  each region.  [required]
+  --fingerprint-dir TEXT          Path to directory containing fprint files.
+                                  [required]
   --cyear-start INTEGER           Constant rate calculation for projections
                                   starts at this year
   --cyear-end TEXT                Constant rate calculation for projections
