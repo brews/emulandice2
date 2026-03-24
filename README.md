@@ -7,17 +7,7 @@ Application projecting sea-level change from muli-model land-ice Gaussian proces
 
 ## Example
 
-First let's create directories for input and output data.
-
-```shell
-mkdir -p ./data/input
-
-echo "New_York	12	40.70	-74.01" > ./data/input/location.lst
-
-mkdir -p ./data/output
-```
-
-This application can run with input data available online from https://rutgers.app.box.com/v/facts-module-data/file/1449938771233. Download (~170 MB) and uncompress the tarball in the above link into the `./data/input` directory just created.
+emulandice2 is still in development and the required input data formats are an area of active development. Until things get ironed out more we just need to assume that you have all the data magically available in a `./data/input` directory. All projection output will be written to `./data/output`.
 
 Now run the container, for example with Docker, like
 
