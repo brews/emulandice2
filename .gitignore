@@ -266,3 +266,4 @@ po/*~
 rsconnect/
 
 data/
+.history/
