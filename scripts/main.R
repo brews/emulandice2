@@ -14,7 +14,7 @@
 # Greenland, Antarctica, and glacier regions (19) from EU H2020 PROTECT project.
 # These simulations start between 1950 and 2005 and end between 2100-2300.
 #
-# Emulator projections here (main.R) usually begin in 1995, 2000 or 2005 ('cal_start')
+# Emulator projections here (main.R) begin in 'cal_start' year
 # and end between 2100 and 2300 ('final_year').
 #
 #_______________________________________________________________________________
@@ -71,7 +71,7 @@ stopifnot(i_s %in% c("GIS", "AIS", "GLA"))
 cat(sprintf("Region: %s\n", reg))
 stopifnot(reg %in% c("ALL", "WAIS", "EAIS", "PEN", paste0("RGI", sprintf("%02i",1:19))))
 
-# Emulator build file name includes ice model_list and emulator_covar
+# Emulator build file name
 cat(sprintf("Emulator build file: %s\n", emu_file))
 
 # Netcdf name
@@ -184,8 +184,7 @@ cat("Prior choices:", prior_choices,"\n",  file = logfile_results, append = TRUE
 #' # Set model discrepancy
 # Model error -----------------------------------------------------------------------
 
-# Model discrepancy
-# xxx Using multiple of obs error for now
+# Model discrepancy - a multiple of obs error
 if (i_s == "GLA") { scale_mod_err = 6
 } else scale_mod_err = 3
 stopifnot( scale_mod_err > 1 )
@@ -197,14 +196,34 @@ cat(paste("\nModel error for calibration: using",scale_mod_err,"x obs error", "\
 # Calculate combined discrepancy
 total_err <- sqrt(obs_data[,"SLE_sd"]^2 + model_err^2)
 
+
+
 # Save for total change e.g. for plots
 # xxx TODO: multiple time periods for IMBIE
-if (i_s == "GLA" && glacier_data == "Hugonnet") { tot_err <- total_err
+glacier_data <- "Hugonnet" # XXX TEMP FIX FOR 260514 GLA build files which didn't save this
+
+# Emma hacky fix, took this from upstream R pkg's emulator_build.R
+# Calculate and print total sea level contribution over observational period
+# Hugonnet is already the total change
+if (i_s == "GLA" && glacier_data == "Hugonnet") {
+  obs_period <- "2000-01-01_2020-01-01"
+  obs_change <- obs_data[obs_data$Year == obs_period, "SLE"]
+  obs_err <- obs_data[obs_data$Year == obs_period, "SLE_sd"]
+} else {
+  stopifnot( cal_start %in% obs_data[, "Year"] )
+  stopifnot( cal_end %in% obs_data[, "Year"] )
+  obs_change <- obs_data[obs_data$Year == cal_end,"SLE"] - obs_data[obs_data$Year == cal_start, "SLE"]
+  obs_err <- obs_data[obs_data$Year == cal_end,"SLE_sd"]
+  obs_period <- paste0( cal_start, "-", cal_end)
+}
+
+# Select total change for Hugonnet data, or end year for annual observations
+if (i_s == "GLA" && glacier_data == "Hugonnet") { tot_err <- total_err[obs_data$Year == "2000-01-01_2020-01-01"]
 } else tot_err <- total_err[obs_data$Year == cal_end]
 
-#cat(paste0("\nObserved change (", cal_start,"-", cal_end, "):\n"), file = logfile_results, append = TRUE)
-#cat(sprintf("%.4f +/- %.4f cm SLE (3 s.d. obs error)\n", obs_change, 3.0*obs_err), file = logfile_results, append = TRUE)
-#cat(sprintf("%.4f +/- %.4f cm SLE (3 s.d. total error)\n", obs_change, 3.0*tot_err), file = logfile_results, append = TRUE)
+cat(paste0("\nObserved change (", cal_start,"-", cal_end, "):\n"), file = logfile_results, append = TRUE)
+cat(sprintf("%.4f +/- %.4f cm SLE (3 s.d. obs error)\n", obs_change, 3.0*obs_err), file = logfile_results, append = TRUE)
+cat(sprintf("%.4f +/- %.4f cm SLE (3 s.d. total error)\n", obs_change, 3.0*tot_err), file = logfile_results, append = TRUE)
 
 #' # Option to replot simulations
 # Replot sims -----------------------------------------------------------------------
@@ -224,7 +243,7 @@ if (plot_level > 2) {
 # Design: calibration -----------------------------------------------------------------------
 
 # This overwrites uniform design_pred from RData build file (as intended, for reusing plot scripts)
-# design_pred <- load_design_to_pred( "AR6_2LM" ) # XXXX
+# design_pred <- emulandice2::load_design_to_pred( "AR6_2LM" ) # XXXX
 
 # Fixed GSAT design for calibrating ice model parameters
 design_fixed <- emulandice2::load_design_to_pred( "fixed_temp", N_prior ) # Large N, 3 fixed GSAT
@@ -253,7 +272,7 @@ cat("\nPredict:\n", file = logfile_results, append = TRUE)
 # from emulator_build.R (reusing scenario-based plotting code)
 myem <- list()
 
-# emulator_predict() calls emu_mv with type = "var"
+# emulandice2::emulator_predict() calls emu_mv with type = "var"
 # using emulator object saved to RData workspace file
 # Here scen is fixed_temp not a scenario, but keep label for consistency
 for (scen in fixed_temp_list) {
@@ -261,7 +280,7 @@ for (scen in fixed_temp_list) {
   cat(paste("Fixed climate:",scen,"\n"), file = logfile_results, append = TRUE)
 
   # Rescale priors using same scaling factors as for simulator inputs
-  # xxx safer to put scaling in emulator_predict()
+  # xxx safer to put scaling in emulandice2::emulator_predict()
   design_fixed_scaled_cont <- scale(design_fixed[[scen]][ , input_cont_list],
                                     center = inputs_centre,
                                     scale = inputs_scale )
@@ -290,13 +309,6 @@ cat("LIKELIHOODS AND WEIGHTS\n", file = logfile_results, append = TRUE)
 
 #' ## Calculate model-obs differences
 
-# xxx Make this multivariate! and rename because confusing
-obs_change <- obs_data[obs_data$Year == cal_end,"SLE"] - obs_data[obs_data$Year == cal_start, "SLE"]
-obs_change_err <- total_err[obs_data$Year == cal_end]
-
-cat(paste0("\nObserved change (", cal_start,"-", cal_end, "):\n"), file = logfile_results, append = TRUE)
-cat(sprintf("%.3f +/- %.3f cm SLE (3 sigma total error)\n\n", obs_change, 3*obs_change_err), file = logfile_results, append = TRUE)
-
 # Calculate difference between each ensemble member (mean and final) and observations
 dist_mean <- list()
 dist_proj <- list()
@@ -309,7 +321,7 @@ for (scen in fixed_temp_list) {
   dist_proj[[scen]] <- projections[[scen]][, paste0("y",cal_end) ] - obs_change
 }
 
-# Save normalised weights
+# Calculate normalised weights - this uses tot_err in likelihood
 myem_weights <- list()
 proj_weights <- list()
 for (scen in fixed_temp_list) {
@@ -324,10 +336,10 @@ cat("LOAD DESIGNS\n", file = logfile_results, append = TRUE)
 # Both are generated separately, so GSAT is not calibrated:
 #
 # (a) Prior = samples from ice model priors exactly once for each FaIR GSAT simulation
-# this is done in load_design_to_pred()
+# this is done in emulandice2::load_design_to_pred()
 # (b) Posterior = samples from ice model posteriors (weighted priors), bolts on FaIR prior
 # (i.e. because GSAT is intentionally not calibrated)
-# this is done here, using previous output from load_design_to_pred() call [design_fixed]
+# this is done here, using previous output from emulandice2::load_design_to_pred() call [design_fixed]
 
 # Note these are also resampled for each SSP, introducing more random noise
 
@@ -694,7 +706,7 @@ if (write_rdata) {
                         "proj_post", "proj_post_quant", # posterior projections
                         "proj_weights", # weights
                         "years_em", "q_list", "baseyear", # Year, baseline and quantiles for projections
-                        "obs_data", "obs_change", "obs_change_err", # calibration
+                        "obs_data", "obs_change", "obs_err", "tot_err", # calibration
                         "total_err", "cal_start", "cal_end",
                         "sle_lim", "ice_name", "scen_name", # plotting
                         "AR6_rgb", "AR6_rgb_med", "AR6_rgb_light" )
