@@ -104,7 +104,7 @@ class Region(enum.StrEnum):
     "--output-lslr-file",
     envvar="EMULANDICE2_OUTPUT_LSLR_FILE",
     help="Path to write output local SLR file.",
-    required=True,
+    required=False,
     type=str,
 )
 @click.option(
@@ -257,18 +257,24 @@ def main(
             r_script_path=r_script_path,
         )
 
-        # Takes R output files as input so need to run postprocessing before tmp
-        # working dir gets cleaned up.
-        emulandice_postprocess(
-            locationfile=location_file,
-            chunksize=chunksize,
-            pipeline_id=pipeline_id,
-            ncfiles=r_projected_paths,
-            grdfingerprintfile=grdfingerprintfile,
-            fingerprint_dir=fingerprint_dir,
-            scenario=scenario,
-            baseyear=baseyear,
-            output_lslr_file=output_lslr_file,
-        )
+        if output_lslr_file is not None:
+            logger.info("Starting emulandice2 postprocessing")
+            # Takes R output files as input so need to run postprocessing before tmp
+            # working dir gets cleaned up.
+            emulandice_postprocess(
+                locationfile=location_file,
+                chunksize=chunksize,
+                pipeline_id=pipeline_id,
+                ncfiles=r_projected_paths,
+                grdfingerprintfile=grdfingerprintfile,
+                fingerprint_dir=fingerprint_dir,
+                scenario=scenario,
+                baseyear=baseyear,
+                output_lslr_file=output_lslr_file,
+            )
+        else:
+            logger.info(
+                "No output local SLR file specified, skipping emulandice2 postprocessing"
+            )
 
     logger.info("emulandice2 complete")
