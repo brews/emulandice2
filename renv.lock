@@ -327,8 +327,8 @@
       "Version": "2.0.0",
       "Source": "git",
       "RemoteType": "git",
-      "RemoteUrl": "https://github.com/tamsinedwards/emulandice2",
-      "RemoteRef": "52b9e4aadd1d34bd46bed581e785ee15f03fc7d0"
+      "RemoteUrl": "https://github.com/brews/rstat_emulandice2",
+      "RemoteRef": "8ae1124d67b577347db52343e4f0d8e3874550bd"
     },
     "foreign": {
       "Package": "foreign",
